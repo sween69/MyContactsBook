@@ -36,7 +36,7 @@ class ContactRepository(private val context: Context) {
         val contactsType = object : TypeToken<List<Contact>>() {}.type
         val contacts = Gson().fromJson<List<Contact>>(contactsJson, contactsType)
 
-        return MutableLiveData<List<Contact>>(contacts)
+        return MutableLiveData(contacts)
     }
 
     fun getContactById(contactId: String): Contact {

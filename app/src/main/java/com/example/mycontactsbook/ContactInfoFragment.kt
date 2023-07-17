@@ -6,7 +6,10 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.view.MenuHost
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -28,11 +31,29 @@ class ContactInfoFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.fragment_contact_info, container, false)
+        return inflater.inflate(R.layout.fragment_contact_info, container, false)
+    }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         contactId = args.contactId
+        setupView(view)
+        setupToolbar()
+        setupViewModel()
+    }
 
+    private fun setupView(view: View) {
+        // Initialize views
+        toolbar = view.findViewById(R.id.toolbar)
+        firstNameEditText = view.findViewById(R.id.editText_firstName)
+        lastNameEditText = view.findViewById(R.id.editText_lastName)
+        emailEditText = view.findViewById(R.id.editText_email)
+        phoneEditText = view.findViewById(R.id.editText_phone)
+    }
+
+    private fun setupViewModel() {
         contactRepository = ContactRepository(requireContext().applicationContext)
+
         contactInfoViewModel = ViewModelProvider(
             this,
             ViewModelFactory(contactRepository, ContactInfoViewModel::class.java)
@@ -43,13 +64,9 @@ class ContactInfoFragment : Fragment() {
         }
 
         contactInfoViewModel.setContactById(contactId)
+    }
 
-        // Initialize views
-        toolbar = view.findViewById(R.id.toolbar)
-        firstNameEditText = view.findViewById(R.id.editText_firstName)
-        lastNameEditText = view.findViewById(R.id.editText_lastName)
-        emailEditText = view.findViewById(R.id.editText_email)
-        phoneEditText = view.findViewById(R.id.editText_phone)
+    private fun setupToolbar() {
 
         (requireActivity() as AppCompatActivity).setSupportActionBar(toolbar)
         val actionBar = (requireActivity() as AppCompatActivity).supportActionBar
@@ -61,13 +78,30 @@ class ContactInfoFragment : Fragment() {
 
         toolbar.title = "Contact Info"
 
-        toolbar.setNavigationOnClickListener {
-            findNavController().navigateUp()
-        }
+        (requireActivity() as MenuHost).addMenuProvider(object : MenuProvider {
 
-        setHasOptionsMenu(true)
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.menu_details, menu)
+            }
 
-        return view
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.action_save -> {
+                        if (isFormValid()) {
+                            saveContact()
+                        } else {
+                            Toast.makeText(
+                                requireContext(),
+                                "Main information are required",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
     }
 
     private fun updateContactInfo(contact: Contact) {
@@ -76,28 +110,6 @@ class ContactInfoFragment : Fragment() {
             lastNameEditText.setText(lastName)
             emailEditText.setText(email)
             phoneEditText.setText(phone)
-        }
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_details, menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_save -> {
-                if (isFormValid()) {
-                    saveContact()
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Main information is required",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
         }
     }
 

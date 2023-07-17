@@ -3,7 +3,10 @@ package com.example.mycontactsbook
 import android.os.Bundle
 import android.view.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.MenuHost
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -19,21 +22,16 @@ class ContactListFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.fragment_contact_list, container, false)
-
-        (requireActivity() as AppCompatActivity).setSupportActionBar(view.findViewById(R.id.toolbar))
-        val actionBar = (requireActivity() as AppCompatActivity).supportActionBar
-        actionBar?.setDisplayShowTitleEnabled(false)
-        actionBar?.setDisplayHomeAsUpEnabled(true)
-        actionBar?.setHomeAsUpIndicator(android.R.drawable.ic_menu_search)
-        setHasOptionsMenu(true)
-
-        return view
+        return inflater.inflate(R.layout.fragment_contact_list, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupToolbar()
+        setupRecyclerViewAdViewModel(view)
+    }
 
+    private fun setupRecyclerViewAdViewModel(view: View) {
         recyclerView = view.findViewById(R.id.rv_contact_list)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
@@ -51,22 +49,36 @@ class ContactListFragment : Fragment() {
         }
 
         contactAdapter.setOnItemClickListener { contact ->
-            val action = ContactListFragmentDirections.actionContactListFragmentToContactInfoFragment(contact.id)
+            val action =
+                ContactListFragmentDirections.actionContactListFragmentToContactInfoFragment(contact.id)
             findNavController().navigate(action)
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_main, menu)
-    }
+    private fun setupToolbar() {
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_add -> {
-                // Handle add action
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
+        (requireActivity() as AppCompatActivity).setSupportActionBar(view?.findViewById(R.id.toolbar))
+        val actionBar = (requireActivity() as AppCompatActivity).supportActionBar
+        actionBar?.apply {
+            setDisplayShowTitleEnabled(false)
+            setDisplayHomeAsUpEnabled(true)
+            setHomeAsUpIndicator(android.R.drawable.ic_menu_search)
         }
+
+        (requireActivity() as MenuHost).addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.menu_main, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.action_add -> {
+                        // Handle add action
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
     }
 }
